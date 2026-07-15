@@ -123,9 +123,20 @@ class _TodoHomePageState extends State<TodoHomePage> {
   }
 
   Future<void> _openForm({Todo? initial, int? index}) async {
+    final existingCategories = _todos
+        .map((t) => t.category)
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
     final result = await Navigator.push<Todo>(
       context,
-      MaterialPageRoute(builder: (_) => TaskFormPage(initial: initial)),
+      MaterialPageRoute(
+        builder: (_) => TaskFormPage(
+          initial: initial,
+          existingCategories: existingCategories,
+        ),
+      ),
     );
     if (result == null) return;
     setState(() {
@@ -402,7 +413,7 @@ class _TodoHomePageState extends State<TodoHomePage> {
                                           const SizedBox(width: 2),
                                         ],
                                         Text(
-                                          'Due ${todo.dueDate!.shortLabel}',
+                                          'Due ${todo.dueLabel}',
                                           style: todo.isOverdue
                                               ? TextStyle(
                                                   color: Theme.of(context).colorScheme.error,
