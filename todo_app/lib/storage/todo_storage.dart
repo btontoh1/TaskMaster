@@ -8,6 +8,7 @@ import '../models/todo.dart';
 class TodoStorage {
   static const _key = 'todos';
   static const _sortKey = 'defaultSortOption';
+  static const _reminderKey = 'reminderMinutesBefore';
 
   Future<List<Todo>> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -34,5 +35,15 @@ class TodoStorage {
   Future<void> saveDefaultSortOption(SortOption option) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_sortKey, option.name);
+  }
+
+  Future<int> loadReminderMinutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_reminderKey) ?? 0;
+  }
+
+  Future<void> saveReminderMinutes(int minutes) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_reminderKey, minutes);
   }
 }

@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 
 import 'models/sort_option.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({
     super.key,
     required this.themeMode,
     required this.onThemeModeChanged,
     required this.defaultSortOption,
     required this.onDefaultSortOptionChanged,
+    required this.reminderMinutes,
+    required this.onReminderMinutesChanged,
+    required this.onRequestNotificationPermission,
     required this.onClearCompleted,
     required this.onResetAll,
   });
@@ -17,8 +20,28 @@ class SettingsPage extends StatelessWidget {
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final SortOption defaultSortOption;
   final ValueChanged<SortOption> onDefaultSortOptionChanged;
+  final int reminderMinutes;
+  final ValueChanged<int> onReminderMinutesChanged;
+  final VoidCallback onRequestNotificationPermission;
   final VoidCallback onClearCompleted;
   final VoidCallback onResetAll;
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  late ThemeMode _themeMode;
+  late SortOption _sortOption;
+  late int _reminderMinutes;
+
+  @override
+  void initState() {
+    super.initState();
+    _themeMode = widget.themeMode;
+    _sortOption = widget.defaultSortOption;
+    _reminderMinutes = widget.reminderMinutes;
+  }
 
   Future<bool> _confirm(
     BuildContext context, {
@@ -54,9 +77,11 @@ class SettingsPage extends StatelessWidget {
         children: [
           const _SectionHeader('Appearance'),
           RadioGroup<ThemeMode>(
-            groupValue: themeMode,
+            groupValue: _themeMode,
             onChanged: (value) {
-              if (value != null) onThemeModeChanged(value);
+              if (value == null) return;
+              setState(() => _themeMode = value);
+              widget.onThemeModeChanged(value);
             },
             child: Column(
               children: [
@@ -75,9 +100,11 @@ class SettingsPage extends StatelessWidget {
           const Divider(),
           const _SectionHeader('Default sort order'),
           RadioGroup<SortOption>(
-            groupValue: defaultSortOption,
+            groupValue: _sortOption,
             onChanged: (value) {
-              if (value != null) onDefaultSortOptionChanged(value);
+              if (value == null) return;
+              setState(() => _sortOption = value);
+              widget.onDefaultSortOptionChanged(value);
             },
             child: Column(
               children: [
@@ -88,6 +115,39 @@ class SettingsPage extends StatelessWidget {
                   ),
               ],
             ),
+          ),
+          const Divider(),
+          const _SectionHeader('Reminders'),
+          RadioGroup<int>(
+            groupValue: _reminderMinutes,
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _reminderMinutes = value);
+              widget.onReminderMinutesChanged(value);
+            },
+            child: Column(
+              children: [
+                RadioListTile<int>(title: const Text('Off'), value: 0),
+                RadioListTile<int>(
+                  title: const Text('15 minutes before'),
+                  value: 15,
+                ),
+                RadioListTile<int>(
+                  title: const Text('30 minutes before'),
+                  value: 30,
+                ),
+                RadioListTile<int>(
+                  title: const Text('1 hour before'),
+                  value: 60,
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.notifications_active_outlined),
+            title: const Text('Enable browser notifications'),
+            subtitle: const Text('Allow this app to show due-task alerts'),
+            onTap: widget.onRequestNotificationPermission,
           ),
           const Divider(),
           const _SectionHeader('Data'),
@@ -102,7 +162,7 @@ class SettingsPage extends StatelessWidget {
                     'This removes every task marked done. This cannot be undone.',
                 confirmLabel: 'Clear',
               );
-              if (confirmed) onClearCompleted();
+              if (confirmed) widget.onClearCompleted();
             },
           ),
           ListTile(
@@ -122,7 +182,7 @@ class SettingsPage extends StatelessWidget {
                     'This permanently deletes every task. This cannot be undone.',
                 confirmLabel: 'Delete everything',
               );
-              if (confirmed) onResetAll();
+              if (confirmed) widget.onResetAll();
             },
           ),
         ],

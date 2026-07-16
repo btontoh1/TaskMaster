@@ -118,6 +118,8 @@ void main() {
     await tester.tap(find.byIcon(Icons.settings));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Reset all data'), 200);
+    await tester.ensureVisible(find.text('Reset all data'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Reset all data'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete everything'));

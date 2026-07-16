@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/sort_option.dart';
 import 'models/todo.dart';
+import 'services/notification_service.dart';
 import 'settings_page.dart';
 import 'storage/todo_storage.dart';
 import 'task_form_page.dart';
+
+final rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 void main() {
   runApp(const TodoApp());
@@ -44,6 +49,7 @@ class _TodoAppState extends State<TodoApp> {
     return MaterialApp(
       title: 'To-Do',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       themeMode: _themeMode,
       theme: ThemeData(
         colorSchemeSeed: Colors.indigo,
@@ -81,31 +87,97 @@ class TodoHomePage extends StatefulWidget {
 class _TodoHomePageState extends State<TodoHomePage> {
   final List<Todo> _todos = [];
   final _storage = TodoStorage();
+  late final _notifications = NotificationService(rootScaffoldMessengerKey);
   bool _loading = true;
 
   StatusFilter _statusFilter = StatusFilter.all;
   SortOption _sortOption = SortOption.manual;
   String? _categoryFilter;
+  int _reminderMinutes = 0;
+
+  Timer? _dueCheckTimer;
+  final Set<int> _remindedIds = {};
+  final Set<int> _dueNotifiedIds = {};
+  final Set<int> _overdueNotifiedIds = {};
 
   @override
   void initState() {
     super.initState();
     _init();
+    _dueCheckTimer =
+        Timer.periodic(const Duration(seconds: 30), (_) => _checkDueNotifications());
+  }
+
+  @override
+  void dispose() {
+    _dueCheckTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _init() async {
     final todos = await _storage.load();
     final defaultSort = await _storage.loadDefaultSortOption();
+    final reminderMinutes = await _storage.loadReminderMinutes();
     setState(() {
       _todos.addAll(todos);
       _sortOption = defaultSort;
+      _reminderMinutes = reminderMinutes;
       _loading = false;
     });
+    _checkDueNotifications();
   }
 
   Future<void> _setDefaultSortOption(SortOption option) async {
     setState(() => _sortOption = option);
     await _storage.saveDefaultSortOption(option);
+  }
+
+  Future<void> _setReminderMinutes(int minutes) async {
+    setState(() => _reminderMinutes = minutes);
+    await _storage.saveReminderMinutes(minutes);
+  }
+
+  void _checkDueNotifications() {
+    final now = DateTime.now();
+    for (final todo in _todos) {
+      if (todo.done || todo.dueDate == null) continue;
+      final id = identityHashCode(todo);
+
+      if (todo.isOverdue) {
+        if (!_overdueNotifiedIds.contains(id)) {
+          _overdueNotifiedIds.add(id);
+          _notifications.notify('Overdue', '"${todo.title}" was due ${todo.dueLabel}');
+        }
+        continue;
+      }
+
+      if (todo.dueTime == null) continue;
+      final dueDateTime = DateTime(
+        todo.dueDate!.year,
+        todo.dueDate!.month,
+        todo.dueDate!.day,
+        todo.dueTime!.hour,
+        todo.dueTime!.minute,
+      );
+
+      if (!_dueNotifiedIds.contains(id) && !now.isBefore(dueDateTime)) {
+        _dueNotifiedIds.add(id);
+        _notifications.notify('Task due now', '"${todo.title}" is due now');
+        continue;
+      }
+
+      if (_reminderMinutes > 0 && !_remindedIds.contains(id)) {
+        final reminderTime =
+            dueDateTime.subtract(Duration(minutes: _reminderMinutes));
+        if (!now.isBefore(reminderTime) && now.isBefore(dueDateTime)) {
+          _remindedIds.add(id);
+          _notifications.notify(
+            'Upcoming task',
+            '"${todo.title}" is due in $_reminderMinutes minutes',
+          );
+        }
+      }
+    }
   }
 
   void _clearCompleted() {
@@ -147,12 +219,19 @@ class _TodoHomePageState extends State<TodoHomePage> {
       }
     });
     _storage.save(_todos);
+    _checkDueNotifications();
   }
 
   void _toggleTodo(int index) {
     setState(() {
       _todos[index].done = !_todos[index].done;
     });
+    if (!_todos[index].done) {
+      final id = identityHashCode(_todos[index]);
+      _remindedIds.remove(id);
+      _dueNotifiedIds.remove(id);
+      _overdueNotifiedIds.remove(id);
+    }
     _storage.save(_todos);
   }
 
@@ -256,6 +335,10 @@ class _TodoHomePageState extends State<TodoHomePage> {
                   onThemeModeChanged: widget.onThemeModeChanged,
                   defaultSortOption: _sortOption,
                   onDefaultSortOptionChanged: _setDefaultSortOption,
+                  reminderMinutes: _reminderMinutes,
+                  onReminderMinutesChanged: _setReminderMinutes,
+                  onRequestNotificationPermission: () =>
+                      _notifications.requestPermission(),
                   onClearCompleted: _clearCompleted,
                   onResetAll: _resetAll,
                 ),
