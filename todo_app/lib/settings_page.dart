@@ -74,116 +74,139 @@ class _SettingsPageState extends State<SettingsPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
-          const _SectionHeader('Appearance'),
-          RadioGroup<ThemeMode>(
-            groupValue: _themeMode,
-            onChanged: (value) {
-              if (value == null) return;
-              setState(() => _themeMode = value);
-              widget.onThemeModeChanged(value);
-            },
+          _SettingsSection(
+            title: 'Appearance',
+            icon: Icons.palette_outlined,
+            child: RadioGroup<ThemeMode>(
+              groupValue: _themeMode,
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _themeMode = value);
+                widget.onThemeModeChanged(value);
+              },
+              child: Column(
+                children: [
+                  for (final mode in ThemeMode.values)
+                    RadioListTile<ThemeMode>(
+                      title: Text(switch (mode) {
+                        ThemeMode.system => 'System',
+                        ThemeMode.light => 'Light',
+                        ThemeMode.dark => 'Dark',
+                      }),
+                      value: mode,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          _SettingsSection(
+            title: 'Default sort order',
+            icon: Icons.sort_rounded,
+            child: RadioGroup<SortOption>(
+              groupValue: _sortOption,
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _sortOption = value);
+                widget.onDefaultSortOptionChanged(value);
+              },
+              child: Column(
+                children: [
+                  for (final option in SortOption.values)
+                    RadioListTile<SortOption>(
+                      title: Text(option.label),
+                      value: option,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          _SettingsSection(
+            title: 'Reminders',
+            icon: Icons.notifications_outlined,
             child: Column(
               children: [
-                for (final mode in ThemeMode.values)
-                  RadioListTile<ThemeMode>(
-                    title: Text(switch (mode) {
-                      ThemeMode.system => 'System',
-                      ThemeMode.light => 'Light',
-                      ThemeMode.dark => 'Dark',
-                    }),
-                    value: mode,
+                RadioGroup<int>(
+                  groupValue: _reminderMinutes,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _reminderMinutes = value);
+                    widget.onReminderMinutesChanged(value);
+                  },
+                  child: Column(
+                    children: [
+                      RadioListTile<int>(title: const Text('Off'), value: 0),
+                      RadioListTile<int>(
+                        title: const Text('15 minutes before'),
+                        value: 15,
+                      ),
+                      RadioListTile<int>(
+                        title: const Text('30 minutes before'),
+                        value: 30,
+                      ),
+                      RadioListTile<int>(
+                        title: const Text('1 hour before'),
+                        value: 60,
+                      ),
+                    ],
                   ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.notifications_active_outlined),
+                  title: const Text('Enable browser notifications'),
+                  subtitle: const Text('Allow this app to show due-task alerts'),
+                  onTap: widget.onRequestNotificationPermission,
+                ),
               ],
             ),
           ),
-          const Divider(),
-          const _SectionHeader('Default sort order'),
-          RadioGroup<SortOption>(
-            groupValue: _sortOption,
-            onChanged: (value) {
-              if (value == null) return;
-              setState(() => _sortOption = value);
-              widget.onDefaultSortOptionChanged(value);
-            },
+          const SizedBox(height: 24),
+          _SettingsSection(
+            title: 'Data',
+            icon: Icons.storage_outlined,
             child: Column(
               children: [
-                for (final option in SortOption.values)
-                  RadioListTile<SortOption>(
-                    title: Text(option.label),
-                    value: option,
+                ListTile(
+                  leading: const Icon(Icons.checklist_rtl),
+                  title: const Text('Clear completed tasks'),
+                  onTap: () async {
+                    final confirmed = await _confirm(
+                      context,
+                      title: 'Clear completed tasks?',
+                      message:
+                          'This removes every task marked done. This cannot be undone.',
+                      confirmLabel: 'Clear',
+                    );
+                    if (confirmed) widget.onClearCompleted();
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_forever,
+                    color: Theme.of(context).colorScheme.error,
                   ),
-              ],
-            ),
-          ),
-          const Divider(),
-          const _SectionHeader('Reminders'),
-          RadioGroup<int>(
-            groupValue: _reminderMinutes,
-            onChanged: (value) {
-              if (value == null) return;
-              setState(() => _reminderMinutes = value);
-              widget.onReminderMinutesChanged(value);
-            },
-            child: Column(
-              children: [
-                RadioListTile<int>(title: const Text('Off'), value: 0),
-                RadioListTile<int>(
-                  title: const Text('15 minutes before'),
-                  value: 15,
-                ),
-                RadioListTile<int>(
-                  title: const Text('30 minutes before'),
-                  value: 30,
-                ),
-                RadioListTile<int>(
-                  title: const Text('1 hour before'),
-                  value: 60,
+                  title: Text(
+                    'Reset all data',
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                  onTap: () async {
+                    final confirmed = await _confirm(
+                      context,
+                      title: 'Reset all data?',
+                      message:
+                          'This permanently deletes every task. This cannot be undone.',
+                      confirmLabel: 'Delete everything',
+                    );
+                    if (confirmed) widget.onResetAll();
+                  },
                 ),
               ],
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.notifications_active_outlined),
-            title: const Text('Enable browser notifications'),
-            subtitle: const Text('Allow this app to show due-task alerts'),
-            onTap: widget.onRequestNotificationPermission,
-          ),
-          const Divider(),
-          const _SectionHeader('Data'),
-          ListTile(
-            leading: const Icon(Icons.checklist_rtl),
-            title: const Text('Clear completed tasks'),
-            onTap: () async {
-              final confirmed = await _confirm(
-                context,
-                title: 'Clear completed tasks?',
-                message:
-                    'This removes every task marked done. This cannot be undone.',
-                confirmLabel: 'Clear',
-              );
-              if (confirmed) widget.onClearCompleted();
-            },
-          ),
-          ListTile(
-            leading: Icon(
-              Icons.delete_forever,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            title: Text(
-              'Reset all data',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-            onTap: () async {
-              final confirmed = await _confirm(
-                context,
-                title: 'Reset all data?',
-                message:
-                    'This permanently deletes every task. This cannot be undone.',
-                confirmLabel: 'Delete everything',
-              );
-              if (confirmed) widget.onResetAll();
-            },
           ),
         ],
       ),
@@ -191,21 +214,44 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.title);
+class _SettingsSection extends StatelessWidget {
+  const _SettingsSection({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
 
   final String title;
+  final IconData icon;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-            ),
-      ),
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+          ),
+        ),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: child,
+        ),
+      ],
     );
   }
 }

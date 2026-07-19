@@ -13,7 +13,9 @@ Future<void> _addTask(
   await tester.pumpAndSettle();
   await tester.enterText(find.byType(TextFormField).at(0), title);
   if (priority != null) {
-    await tester.tap(find.text(priority));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(priority).first);
   }
   await tester.tap(find.byTooltip('Save'));
   await tester.pumpAndSettle();
@@ -25,7 +27,7 @@ void main() {
     await tester.pumpWidget(const TodoApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('No tasks yet — tap + to add one!'), findsOneWidget);
+    expect(find.text('No tasks yet'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.add));
     await tester.pumpAndSettle();
@@ -127,6 +129,6 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    expect(find.text('No tasks yet — tap + to add one!'), findsOneWidget);
+    expect(find.text('No tasks yet'), findsOneWidget);
   });
 }

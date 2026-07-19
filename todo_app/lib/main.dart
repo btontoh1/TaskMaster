@@ -8,6 +8,7 @@ import 'models/todo.dart';
 import 'services/notification_service.dart';
 import 'settings_page.dart';
 import 'storage/todo_storage.dart';
+import 'task_card.dart';
 import 'task_form_page.dart';
 
 final rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -44,6 +45,59 @@ class _TodoAppState extends State<TodoApp> {
     await prefs.setString(_themeModeKey, mode.name);
   }
 
+  static ThemeData _buildTheme(Brightness brightness) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: Colors.indigo,
+      brightness: brightness,
+    );
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: colorScheme.surface,
+      appBarTheme: AppBarTheme(
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.5,
+          color: colorScheme.onSurface,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: colorScheme.surfaceContainerHigh,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      chipTheme: ChipThemeData(
+        shape: const StadiumBorder(),
+        side: BorderSide.none,
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        selectedColor: colorScheme.primaryContainer,
+        labelStyle: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
+        secondaryLabelStyle:
+            TextStyle(fontWeight: FontWeight.w600, color: colorScheme.onPrimaryContainer),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        elevation: 1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -51,15 +105,8 @@ class _TodoAppState extends State<TodoApp> {
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: rootScaffoldMessengerKey,
       themeMode: _themeMode,
-      theme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
-        brightness: Brightness.dark,
-        useMaterial3: true,
-      ),
+      theme: _buildTheme(Brightness.light),
+      darkTheme: _buildTheme(Brightness.dark),
       home: TodoHomePage(
         themeMode: _themeMode,
         onThemeModeChanged: _setThemeMode,
@@ -312,7 +359,6 @@ class _TodoHomePageState extends State<TodoHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My To-Dos'),
-        centerTitle: true,
         actions: [
           PopupMenuButton<SortOption>(
             icon: const Icon(Icons.sort),
@@ -347,10 +393,10 @@ class _TodoHomePageState extends State<TodoHomePage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openForm(),
-        tooltip: 'Add task',
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('New task'),
       ),
       body: Column(
         children: [
@@ -418,111 +464,87 @@ class _TodoHomePageState extends State<TodoHomePage> {
           ],
           Expanded(
             child: _todos.isEmpty
-                ? Center(
-                    child: Text(
-                      'No tasks yet — tap + to add one!',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
+                ? _EmptyState(
+                    icon: Icons.checklist_rtl_rounded,
+                    title: 'No tasks yet',
+                    message: 'Tap "New task" to add your first one',
                   )
                 : visible.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No tasks match your filters',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
+                    ? _EmptyState(
+                        icon: Icons.filter_alt_off_rounded,
+                        title: 'No tasks match your filters',
+                        message: 'Try a different filter or category',
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                         itemCount: visible.length,
                         itemBuilder: (context, position) {
                           final entry = visible[position];
                           final index = entry.key;
                           final todo = entry.value;
-                          return Dismissible(
-                            key: ValueKey(todo.hashCode ^ index),
-                            direction: DismissDirection.endToStart,
-                            onDismissed: (_) => _deleteTodo(index),
-                            background: Container(
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 20),
-                              color: Colors.redAccent,
-                              child: const Icon(Icons.delete, color: Colors.white),
-                            ),
-                            child: ListTile(
-                              onTap: () => _openForm(initial: todo, index: index),
-                              leading: Checkbox(
-                                value: todo.done,
-                                onChanged: (_) => _toggleTodo(index),
-                              ),
-                              title: Text(
-                                todo.title,
-                                style: TextStyle(
-                                  decoration: todo.done
-                                      ? TextDecoration.lineThrough
-                                      : TextDecoration.none,
-                                  color: todo.done ? Colors.grey : null,
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Dismissible(
+                              key: ValueKey(todo.hashCode ^ index),
+                              direction: DismissDirection.endToStart,
+                              onDismissed: (_) => _deleteTodo(index),
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 24),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.errorContainer,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Icon(
+                                  Icons.delete_rounded,
+                                  color: Theme.of(context).colorScheme.onErrorContainer,
                                 ),
                               ),
-                              subtitle: Wrap(
-                                spacing: 12,
-                                runSpacing: 4,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          color: todo.priority.color,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(todo.priority.label),
-                                    ],
-                                  ),
-                                  if (todo.dueDate != null)
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (todo.isOverdue) ...[
-                                          Icon(
-                                            Icons.warning_amber_rounded,
-                                            size: 14,
-                                            color: Theme.of(context).colorScheme.error,
-                                          ),
-                                          const SizedBox(width: 2),
-                                        ],
-                                        Text(
-                                          'Due ${todo.dueLabel}',
-                                          style: todo.isOverdue
-                                              ? TextStyle(
-                                                  color: Theme.of(context).colorScheme.error,
-                                                  fontWeight: FontWeight.bold,
-                                                )
-                                              : null,
-                                        ),
-                                      ],
-                                    ),
-                                  if (todo.category.isNotEmpty)
-                                    Chip(
-                                      label: Text(todo.category),
-                                      visualDensity: VisualDensity.compact,
-                                      materialTapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                    ),
-                                ],
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () => _deleteTodo(index),
+                              child: TaskCard(
+                                todo: todo,
+                                onToggle: () => _toggleTodo(index),
+                                onTap: () => _openForm(initial: todo, index: index),
+                                onDelete: () => _deleteTodo(index),
                               ),
                             ),
                           );
                         },
                       ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 64, color: colorScheme.outline),
+          const SizedBox(height: 16),
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            message,
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
         ],
       ),

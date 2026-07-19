@@ -112,7 +112,7 @@ class _TaskFormPageState extends State<TaskFormPage> {
         actions: [
           IconButton(
             onPressed: _save,
-            icon: const Icon(Icons.check),
+            icon: const Icon(Icons.check_rounded),
             tooltip: 'Save',
           ),
         ],
@@ -120,120 +120,189 @@ class _TaskFormPageState extends State<TaskFormPage> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           children: [
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Title'),
-              textInputAction: TextInputAction.next,
-              autofocus: !isEditing,
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? 'Title is required'
-                  : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(labelText: 'Notes'),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _addingCategory ? _newCategorySentinel : _selectedCategory,
-              decoration: const InputDecoration(labelText: 'Category'),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('None')),
-                for (final category in widget.existingCategories)
-                  DropdownMenuItem(value: category, child: Text(category)),
-                const DropdownMenuItem(
-                  value: _newCategorySentinel,
-                  child: Text('Add new category…'),
-                ),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  if (value == _newCategorySentinel) {
-                    _addingCategory = true;
-                    _categoryController.clear();
-                  } else {
-                    _addingCategory = false;
-                    _selectedCategory = value;
-                  }
-                });
-              },
-            ),
-            if (_addingCategory) ...[
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _categoryController,
-                autofocus: true,
-                decoration: const InputDecoration(labelText: 'New category name'),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Text('Due date', style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                ActionChip(
-                  label: const Text('Today'),
-                  onPressed: () => _setQuickDate(0),
-                ),
-                ActionChip(
-                  label: const Text('Tomorrow'),
-                  onPressed: () => _setQuickDate(1),
-                ),
-                ActionChip(
-                  label: const Text('Next week'),
-                  onPressed: () => _setQuickDate(7),
-                ),
-              ],
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.calendar_today),
-              title: Text(_dueDate == null ? 'No due date' : _dueDate!.longLabel),
-              trailing: _dueDate == null
-                  ? null
-                  : IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () => setState(() {
-                        _dueDate = null;
-                        _dueTime = null;
-                      }),
+            _FormSection(
+              title: 'Details',
+              icon: Icons.description_outlined,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(labelText: 'Title'),
+                      textInputAction: TextInputAction.next,
+                      autofocus: !isEditing,
+                      validator: (value) => (value == null || value.trim().isEmpty)
+                          ? 'Title is required'
+                          : null,
                     ),
-              onTap: _pickDueDate,
-            ),
-            if (_dueDate != null)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.access_time),
-                title: Text(_dueTime == null ? 'No time set' : _dueTime!.label),
-                trailing: _dueTime == null
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () => setState(() => _dueTime = null),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _notesController,
+                      decoration: const InputDecoration(labelText: 'Notes'),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      initialValue:
+                          _addingCategory ? _newCategorySentinel : _selectedCategory,
+                      decoration: const InputDecoration(labelText: 'Category'),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('None')),
+                        for (final category in widget.existingCategories)
+                          DropdownMenuItem(value: category, child: Text(category)),
+                        const DropdownMenuItem(
+                          value: _newCategorySentinel,
+                          child: Text('Add new category…'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          if (value == _newCategorySentinel) {
+                            _addingCategory = true;
+                            _categoryController.clear();
+                          } else {
+                            _addingCategory = false;
+                            _selectedCategory = value;
+                          }
+                        });
+                      },
+                    ),
+                    if (_addingCategory) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _categoryController,
+                        autofocus: true,
+                        decoration:
+                            const InputDecoration(labelText: 'New category name'),
                       ),
-                onTap: _pickDueTime,
+                    ],
+                  ],
+                ),
               ),
-            const SizedBox(height: 16),
-            Text('Priority', style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 8),
-            SegmentedButton<Priority>(
-              segments: const [
-                ButtonSegment(value: Priority.low, label: Text('Low')),
-                ButtonSegment(value: Priority.medium, label: Text('Medium')),
-                ButtonSegment(value: Priority.high, label: Text('High')),
-              ],
-              selected: {_priority},
-              onSelectionChanged: (selection) =>
-                  setState(() => _priority = selection.first),
+            ),
+            const SizedBox(height: 24),
+            _FormSection(
+              title: 'Due date',
+              icon: Icons.event_outlined,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    child: Wrap(
+                      spacing: 8,
+                      children: [
+                        ActionChip(
+                          label: const Text('Today'),
+                          onPressed: () => _setQuickDate(0),
+                        ),
+                        ActionChip(
+                          label: const Text('Tomorrow'),
+                          onPressed: () => _setQuickDate(1),
+                        ),
+                        ActionChip(
+                          label: const Text('Next week'),
+                          onPressed: () => _setQuickDate(7),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.calendar_today_outlined),
+                    title: Text(_dueDate == null ? 'No due date' : _dueDate!.longLabel),
+                    trailing: _dueDate == null
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () => setState(() {
+                              _dueDate = null;
+                              _dueTime = null;
+                            }),
+                          ),
+                    onTap: _pickDueDate,
+                  ),
+                  if (_dueDate != null) ...[
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.access_time_outlined),
+                      title: Text(_dueTime == null ? 'No time set' : _dueTime!.label),
+                      trailing: _dueTime == null
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () => setState(() => _dueTime = null),
+                            ),
+                      onTap: _pickDueTime,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            _FormSection(
+              title: 'Priority',
+              icon: Icons.flag_outlined,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SegmentedButton<Priority>(
+                  segments: const [
+                    ButtonSegment(value: Priority.low, label: Text('Low')),
+                    ButtonSegment(value: Priority.medium, label: Text('Medium')),
+                    ButtonSegment(value: Priority.high, label: Text('High')),
+                  ],
+                  selected: {_priority},
+                  onSelectionChanged: (selection) =>
+                      setState(() => _priority = selection.first),
+                ),
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _FormSection extends StatelessWidget {
+  const _FormSection({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+
+  final String title;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+          ),
+        ),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: child,
+        ),
+      ],
     );
   }
 }
